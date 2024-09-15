@@ -7,75 +7,58 @@ import time
 import random
 import json
 
-
-N: int = 3
+N: int = 10  # Increased number of flashes to 10
 sample_ms = 10.0
 on_ms = 500
 
-
 def random_time_interval(tmin: float, tmax: float) -> float:
-    """return a random time interval between max and min"""
     return random.uniform(tmin, tmax)
 
-
 def blinker(N: int, led: Pin) -> None:
-    # %% let user know game started / is over
-
     for _ in range(N):
         led.high()
         time.sleep(0.1)
         led.low()
         time.sleep(0.1)
 
-
 def write_json(json_filename: str, data: dict) -> None:
-    """Writes data to a JSON file.
-
-    Parameters
-    ----------
-
-    json_filename: str
-        The name of the file to write to. This will overwrite any existing file.
-
-    data: dict
-        Dictionary data to write to the file.
-    """
-
+    """Writes data to a JSON file."""
     with open(json_filename, "w") as f:
         json.dump(data, f)
 
-
 def scorer(t: list[int | None]) -> None:
-    # %% collate results
+    """Evaluate and report player's performance."""
     misses = t.count(None)
     print(f"You missed the light {misses} / {len(t)} times")
 
     t_good = [x for x in t if x is not None]
+    if t_good:
+        minimum_time = min(t_good)
+        maximum_time = max(t_good)
+        average_time = sum(t_good) / len(t_good)
+    else:
+        minimum_time, maximum_time, average_time = None, None, None
 
-    print(t_good)
+    print(f"Response times - Min: {minimum_time}ms, Max: {maximum_time}ms, Avg: {average_time}ms")
 
-    # add key, value to this dict to store the minimum, maximum, average response time
-    # and score (non-misses / total flashes) i.e. the score a floating point number
-    # is in range [0..1]
-    data = {}
+    data = {
+        "misses": misses,
+        "total_flashes": len(t),
+        "minimum_time": minimum_time,
+        "maximum_time": maximum_time,
+        "average_time": average_time
+    }
 
-    # %% make dynamic filename and write JSON
-
-    now: tuple[int] = time.localtime()
-
+    now = time.localtime()
     now_str = "-".join(map(str, now[:3])) + "T" + "_".join(map(str, now[3:6]))
     filename = f"score-{now_str}.json"
-
     print("write", filename)
 
     write_json(filename, data)
 
-
 if __name__ == "__main__":
-    # using "if __name__" allows us to reuse functions in other script files
-
-    led = Pin("LED", Pin.OUT)
-    button = Pin(16, Pin.IN, Pin.PULL_UP)
+    led = Pin(16, Pin.OUT)
+    button = Pin(17, Pin.IN, Pin.PULL_UP)
 
     t: list[int | None] = []
 
@@ -83,7 +66,6 @@ if __name__ == "__main__":
 
     for i in range(N):
         time.sleep(random_time_interval(0.5, 5.0))
-
         led.high()
 
         tic = time.ticks_ms()
