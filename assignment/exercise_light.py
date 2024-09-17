@@ -2,10 +2,14 @@
 """
 Use analog input with photocell
 """
-
+import os
 import time
 import machine
-
+import urequests
+import config
+FIREBASE_URL = config.FIREBASE_URL
+API_KEY = config.FIREBASE_API_KEY
+FIREBASE_TOKEN = config.FIREBASE_TOKEN
 # GP28 is ADC2
 ADC2 = 28
 
@@ -16,7 +20,8 @@ blink_period = 0.1
 
 max_bright = 20000
 min_bright = 10000
-
+log_interval = 10
+last_log_time = time.time()
 
 def clip(value: float) -> float:
     """clip number to range [0, 1]"""
@@ -26,7 +31,22 @@ def clip(value: float) -> float:
         return 1
     return value
 
-
+def log_to_firebase(min_bright: int, max_bright:int):
+    timestamp = time.time()  
+    data = {
+        "fields": {
+            "min_bright": {"integerValue": min_bright},
+            "max_bright": {"integerValue": max_bright},
+            "time": {"timestampValue": timestamp}
+        }
+    }
+    try:
+        response = urequests.post(FIREBASE_URL + '?access_token=' + FIREBASE_TOKEN, json=data)
+        print("Response status:", response.status_code)
+        print("Response text:", response.text)
+        response.close()
+    except Exception as e:
+        print("An error occurred:", e)
 while True:
     value = adc.read_u16()
     print(value)
@@ -43,3 +63,7 @@ while True:
 
     led.low()
     time.sleep(blink_period * (1 - duty_cycle))
+    current_time = time.time()
+    if current_time - last_log_time >= log_interval:
+        log_to_firebase(min_bright, max_bright)
+        last_log_time = current_time
