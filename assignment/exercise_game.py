@@ -10,7 +10,33 @@ import json
 N: int = 10  # Increased number of flashes to 10
 sample_ms = 10.0
 on_ms = 500
+FIREBASE_URL = config.FIREBASE_URL
+API_KEY = config.FIREBASE_API_KEY
+FIREBASE_TOKEN = config.FIREBASE_TOKEN
 
+def log_to_firebase(misses: int, total_flashes: int, minimum_time: float, maximum_time: float, average_time: float):
+    timestamp = time.time()
+    tm = time.gmtime(timestamp)
+    timestamp_iso = "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z".format(
+        tm[0], tm[1], tm[2], tm[3], tm[4], tm[5]
+    )
+    data = {
+        "fields": {
+            "misses": {"integerValue": misses},
+            "total_flashes": {"integerValue": total_flashes},
+            "minimum_time": {"doubleValue": minimum_time},
+            "maximum_time": {"doubleValue": maximum_time},
+            "average_time": {"doubleValue": average_time},
+            "timestamp": {"timestampValue": timestamp_iso}
+        }
+    }
+    try:
+        response = urequests.patch(FIREBASE_URL + '?access_token=' + FIREBASE_TOKEN, json=data)
+        print("Response status:", response.status_code)
+        print("Response text:", response.text)
+        response.close()
+    except Exception as e:
+        print("An error occurred:", e)
 def random_time_interval(tmin: float, tmax: float) -> float:
     return random.uniform(tmin, tmax)
 
@@ -55,6 +81,8 @@ def scorer(t: list[int | None]) -> None:
     print("write", filename)
 
     write_json(filename, data)
+    log_to_firebase(misses, len(t), minimum_time, maximum_time, average_time)
+
 
 if __name__ == "__main__":
     led = Pin(16, Pin.OUT)
