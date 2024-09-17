@@ -31,13 +31,16 @@ def clip(value: float) -> float:
         return 1
     return value
 
-def log_to_firebase(min_bright: int, max_bright:int):
-    timestamp = time.time()  
+def log_to_firebase(value:int):
+    timestamp = time.time()
+    tm = time.gmtime(timestamp)
+    timestamp_iso = "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z".format(
+            tm[0], tm[1], tm[2], tm[3], tm[4], tm[5]
+        )
     data = {
         "fields": {
-            "min_bright": {"integerValue": min_bright},
-            "max_bright": {"integerValue": max_bright},
-            "time": {"timestampValue": timestamp}
+            "value": {"integerValue": value},
+            "time": {"timestampValue": timestamp_iso}
         }
     }
     try:
@@ -57,13 +60,13 @@ while True:
     """
 
     duty_cycle = clip((value - min_bright) / (max_bright - min_bright))
-
     led.high()
     time.sleep(blink_period * duty_cycle)
 
     led.low()
     time.sleep(blink_period * (1 - duty_cycle))
     current_time = time.time()
+    
     if current_time - last_log_time >= log_interval:
-        log_to_firebase(min_bright, max_bright)
+        log_to_firebase(value)
         last_log_time = current_time
