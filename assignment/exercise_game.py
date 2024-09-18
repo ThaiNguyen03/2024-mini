@@ -6,12 +6,14 @@ from machine import Pin
 import time
 import random
 import json
+import config
+import urequests
 
-N: int = 10  # Increased number of flashes to 10
+N: int = 5  # Increased number of flashes to 10
 sample_ms = 10.0
 on_ms = 500
-FIREBASE_URL = config.FIREBASE_URL
-API_KEY = config.FIREBASE_API_KEY
+FIREBASE_URL_GAME = config.FIREBASE_URL_GAME
+FIREBASE_KEY = config.FIREBASE_API_KEY
 FIREBASE_TOKEN = config.FIREBASE_TOKEN
 
 def log_to_firebase(misses: int, total_flashes: int, minimum_time: float, maximum_time: float, average_time: float):
@@ -24,14 +26,18 @@ def log_to_firebase(misses: int, total_flashes: int, minimum_time: float, maximu
         "fields": {
             "misses": {"integerValue": misses},
             "total_flashes": {"integerValue": total_flashes},
-            "minimum_time": {"doubleValue": minimum_time},
-            "maximum_time": {"doubleValue": maximum_time},
-            "average_time": {"doubleValue": average_time},
             "timestamp": {"timestampValue": timestamp_iso}
         }
     }
+
+    if minimum_time is not None:
+        data["fields"]["minimum_time"] = {"doubleValue": minimum_time}
+    if maximum_time is not None:
+        data["fields"]["maximum_time"] = {"doubleValue": maximum_time}
+    if average_time is not None:
+        data["fields"]["average_time"] = {"doubleValue": average_time}
     try:
-        response = urequests.patch(FIREBASE_URL + '?access_token=' + FIREBASE_TOKEN, json=data)
+        response = urequests.post(FIREBASE_URL_GAME + '?access_token=' + FIREBASE_TOKEN, json=data)
         print("Response status:", response.status_code)
         print("Response text:", response.text)
         response.close()
